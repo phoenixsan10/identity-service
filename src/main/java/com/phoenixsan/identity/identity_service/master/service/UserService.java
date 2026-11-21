@@ -19,9 +19,11 @@ import com.phoenixsan.identity.identity_service.master.repository.RoleRepository
 import com.phoenixsan.identity.identity_service.master.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserService {
 
     private final UserRepository userRepository;
@@ -32,8 +34,10 @@ public class UserService {
 
     // ✅ CREATE
     public UserResponse create(UserRequest request) {
+        log.info("Creating new user with username: {}", request.getUserName());
 
         if (userRepository.existsByUserName(request.getUserName())) {
+            log.warn("Username {} already exists", request.getUserName());
             throw new ResourceNotFoundException("Username already exists");
         }
 
@@ -73,6 +77,7 @@ public class UserService {
 
     // ✅ UPDATE
     public UserResponse update(Long id, UserRequest request) {
+        log.info("Updating user with ID: {}", id);
 
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -111,6 +116,7 @@ public class UserService {
 
     // ✅ GET BY ID
     public UserResponse getById(Long id) {
+        log.info("Fetching user with ID: {}", id);
 
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -120,6 +126,7 @@ public class UserService {
 
     // ✅ GET ALL
     public List<UserResponse> getAll() {
+        log.info("Fetching all users");
 
         return userRepository.findAll()
                 .stream()
@@ -129,8 +136,10 @@ public class UserService {
 
     // ✅ DELETE
     public void delete(Long id) {
+        log.info("Deleting user with ID: {}", id);
 
         if (!userRepository.existsById(id)) {
+            log.warn("User with ID: {} not found for deletion", id);
             throw new ResourceNotFoundException("User not found");
         }
 
@@ -138,8 +147,10 @@ public class UserService {
     }
 
     public List<UserResponse> getUsersByOrganizationId(Long organizationId) {
+        log.info("Fetching users for organization ID: {}", organizationId);
 
         if (!organizationRepository.existsById(organizationId)) {
+            log.warn("Organization with ID: {} not found", organizationId);
             throw new ResourceNotFoundException("Organization not found");
         }
 

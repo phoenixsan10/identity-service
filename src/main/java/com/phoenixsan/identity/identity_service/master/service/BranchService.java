@@ -13,9 +13,11 @@ import com.phoenixsan.identity.identity_service.master.repository.BranchReposito
 import com.phoenixsan.identity.identity_service.master.repository.OrganizationRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class BranchService {
 
     private final BranchRepository branchRepository;
@@ -23,6 +25,7 @@ public class BranchService {
 
     // ✅ CREATE
     public BranchResponse create(BranchRequest request) {
+        log.info("Creating new branch with code: {} for organization: {}", request.getCode(), request.getOrganizationId());
 
         // Validate organization
         Organization org = organizationRepository.findById(request.getOrganizationId())
@@ -30,6 +33,7 @@ public class BranchService {
 
         // Optional: check duplicate code per org
         if (branchRepository.existsByCodeAndOrganizationId(request.getCode(), request.getOrganizationId())) {
+            log.warn("Branch code {} already exists for organization {}", request.getCode(), request.getOrganizationId());
             throw new RuntimeException("Branch code already exists for this organization");
         }
 
@@ -45,6 +49,7 @@ public class BranchService {
 
     // ✅ UPDATE
     public BranchResponse update(Long id, BranchRequest request) {
+        log.info("Updating branch with ID: {}", id);
 
         Branch branch = branchRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Branch not found"));
@@ -62,6 +67,7 @@ public class BranchService {
 
     // ✅ GET BY ID
     public BranchResponse getById(Long id) {
+        log.info("Fetching branch with ID: {}", id);
 
         Branch branch = branchRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Branch not found"));
@@ -71,6 +77,7 @@ public class BranchService {
 
     // ✅ GET ALL
     public List<BranchResponse> getAll() {
+        log.info("Fetching all branches");
 
         return branchRepository.findAll()
                 .stream()
@@ -80,8 +87,10 @@ public class BranchService {
 
     // ✅ DELETE
     public void delete(Long id) {
+        log.info("Deleting branch with ID: {}", id);
 
         if (!branchRepository.existsById(id)) {
+            log.warn("Branch with ID: {} not found for deletion", id);
             throw new ResourceNotFoundException("Branch not found");
         }
 
@@ -103,9 +112,11 @@ public class BranchService {
 
 
     public List<BranchResponse> getByOrganizationId(Long organizationId) {
+        log.info("Fetching branches for organization ID: {}", organizationId);
 
     // Optional validation (recommended)
     if (!organizationRepository.existsById(organizationId)) {
+        log.warn("Organization with ID: {} not found", organizationId);
         throw new ResourceNotFoundException("Orgnization not found");
     }
 

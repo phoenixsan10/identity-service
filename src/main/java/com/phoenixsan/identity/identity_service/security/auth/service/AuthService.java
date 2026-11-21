@@ -1,13 +1,17 @@
 package com.phoenixsan.identity.identity_service.security.auth.service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.phoenixsan.identity.identity_service.master.entity.User;
+import com.phoenixsan.identity.identity_service.master.repository.RoleLinkMappingRepository;
 import com.phoenixsan.identity.identity_service.master.repository.UserRepository;
+import com.phoenixsan.identity.identity_service.redis.service.RedisService;
 import com.phoenixsan.identity.identity_service.security.auth.dto.LoginRequest;
 import com.phoenixsan.identity.identity_service.security.auth.dto.LoginResponse;
 import com.phoenixsan.identity.identity_service.security.jwt.JwtService;
@@ -23,9 +27,11 @@ import lombok.RequiredArgsConstructor;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final RoleLinkMappingRepository roleLinkMappingRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
+    private final RedisService redisService;
 
     public LoginResponse login(LoginRequest request, HttpServletResponse response) {
         System.out.println(request.getUserName());
@@ -33,42 +39,51 @@ public class AuthService {
         // 🔍 1. Fetch user
         User user = userRepository.findByUserName(request.getUserName())
                 .orElseThrow(() -> new RuntimeException("Invalid username or password"));
-        System.out.println("/////////////////////////////////////////////");
+
+        Long roleId = user.getRole().getId();
+        List<String> linkList = roleLinkMappingRepository.findLinkDescriptionsByRoleId(roleId);
+
         // 🔐 2. Validate password
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new RuntimeException("Invalid username or password");
         }
 
         // 🔑 3. Generate Access Token
-        String accessToken = jwtService.generateAccessToken(user).trim();
-        String[] parts = accessToken.split("\\.");
-    if (parts.length != 3) {
-        System.out.println("Invalid token structure: " + parts.length + " parts");
         
-    }
-    
-    String header = new String(Base64.getUrlDecoder().decode(parts[0]));
-    String payload = new String(Base64.getUrlDecoder().decode(parts[1]));
-    
-    System.out.println("Header: " + header);
-    System.out.println("Payload: " + payload);
+         List<String> authorities = new ArrayList<>();
 
+        if (Boolean.TRUE.equals(user.getCanCreate())) authorities.add("CAN_CREATE");
+        if (Boolean.TRUE.equals(user.getCanRead())) authorities.add("CAN_READ");
+        if (Boolean.TRUE.equals(user.getCanUpdate())) authorities.add("CAN_UPDATE");
+        if (Boolean.TRUE.equals(user.getCanDelete())) authorities.add("CAN_DELETE");
+        String accessToken = jwtService.generateAccessToken(user, linkList,authorities).trim();
+        String[] parts = accessToken.split("\\.");
+        if (parts.length != 3) {
+            System.out.println("Invalid token structure: " + parts.length + " parts");
 
-        // 🔄 4. Generate Refresh Token
+        }
+
+        String header = new String(Base64.getUrlDecoder().decode(parts[0]));
+        String payload = new String(Base64.getUrlDecoder().decode(parts[1]));
+
+        // 💾 4. Storing Access token in redis
+        redisService.saveToken(user.getId(), accessToken);
+
+        // 🔄 5. Generate Refresh Token
         String refreshTokenValue = jwtService.generateRefreshToken(user);
 
-        // 💾 5. Save Refresh Token in DB
+        // 💾 6. Save Refresh Token in DB
         RefreshToken refreshToken = RefreshToken.builder()
                 .user(user)
                 .token(refreshTokenValue)
                 .expiryDate(LocalDateTime.now().plusDays(7))
-                
+
                 .revoked(false)
                 .build();
 
         refreshTokenRepository.save(refreshToken);
 
-        // 🍪 6. Set Refresh Token in HttpOnly Cookie
+        // 🍪 7. Set Refresh Token in HttpOnly Cookie
         Cookie cookie = new Cookie("refreshToken", refreshTokenValue);
         cookie.setHttpOnly(true);
         cookie.setSecure(false); // 👉 true in production (HTTPS)
@@ -77,7 +92,7 @@ public class AuthService {
 
         response.addCookie(cookie);
 
-        // 📤 7. Return Access Token
+        // 📤 8. Return Access Token
         return LoginResponse.builder()
                 .accessToken(accessToken)
                 .build();

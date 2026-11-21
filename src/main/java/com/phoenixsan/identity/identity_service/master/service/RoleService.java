@@ -21,9 +21,11 @@ import com.phoenixsan.identity.identity_service.master.repository.RoleLinkMappin
 import com.phoenixsan.identity.identity_service.master.repository.RoleRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class RoleService {
 
     private final RoleRepository roleRepository;
@@ -34,6 +36,7 @@ public class RoleService {
     // ✅ CREATE ROLE + PERMISSIONS
     public RoleResponse create(RoleRequest request) {
 
+        log.info("Creating role with name: {} for organization: {}", request.getRoleName(), request.getOrganizationId());
         Organization org = organizationRepository.findById(request.getOrganizationId())
                         .orElseThrow(() -> new ResourceNotFoundException("Orgnization not found"));
 
@@ -41,6 +44,7 @@ public class RoleService {
         // Optional: duplicate role check
         if (roleRepository.existsByRoleNameAndOrganizationId(
                 request.getRoleName(), request.getOrganizationId())) {
+            log.warn("Role already exists for organization {} with name {}", request.getOrganizationId(), request.getRoleName());
             throw new RuntimeException("Role already exists for this organization");
         }
 
@@ -61,6 +65,7 @@ public class RoleService {
             Link link = linkRepository.findById(perm.getLinkId())
                     .orElseThrow(() -> new RuntimeException("Link not found"));
 
+            log.debug("Adding permission for link: {} with action: {}", link.getName(), perm.getAction());
             Action action = Action.valueOf(perm.getAction());
 
             RoleLinkMapping mapping = RoleLinkMapping.builder()
@@ -84,6 +89,7 @@ public class RoleService {
     // ✅ UPDATE ROLE + RESET PERMISSIONS
     public RoleResponse update(Long id, RoleRequest request) {
 
+        log.info("Updating role with ID: {}", id);
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Role not found"));
 
@@ -109,6 +115,7 @@ public class RoleService {
             Link link = linkRepository.findById(perm.getLinkId())
                     .orElseThrow(() -> new ResourceNotFoundException("Link not found"));
 
+            log.debug("Adding permission for link: {} with action: {}", link.getName(), perm.getAction());
             com.phoenixsan.identity.identity_service.master.enums.Action action = Action.valueOf(perm.getAction());
 
             RoleLinkMapping mapping = RoleLinkMapping.builder()
@@ -132,6 +139,7 @@ public class RoleService {
     // ✅ GET BY ID
     public RoleResponse getById(Long id) {
 
+        log.info("Fetching role with ID: {}", id);
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Role not found"));
 
@@ -152,6 +160,7 @@ public class RoleService {
     // ✅ GET ALL
     public List<RoleResponse> getAll() {
 
+        log.info("Fetching all roles");
         return roleRepository.findAll()
                 .stream()
                 .map(role -> {
@@ -173,17 +182,22 @@ public class RoleService {
     // ✅ DELETE
     public void delete(Long id) {
 
+        log.info("Deleting role with ID: {}", id);
         if (!roleRepository.existsById(id)) {
+            log.warn("Role with ID: {} not found for deletion", id);
             throw new ResourceNotFoundException("Role not found");
         }
 
         mappingRepository.deleteByRoleId(id);
         roleRepository.deleteById(id);
+        log.info("Successfully deleted role with ID: {}", id);
     }
 
     public List<RoleResponse> getRolesByOrganizationId(Long organizationId) {
 
+    log.info("Fetching roles for organization ID: {}", organizationId);
     if (!organizationRepository.existsById(organizationId)) {
+        log.warn("Organization with ID: {} not found", organizationId);
         throw new ResourceNotFoundException("Organization not found");
     }
 

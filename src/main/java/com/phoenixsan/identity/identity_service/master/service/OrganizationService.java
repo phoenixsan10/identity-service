@@ -11,16 +11,20 @@ import com.phoenixsan.identity.identity_service.master.entity.Organization;
 import com.phoenixsan.identity.identity_service.master.repository.OrganizationRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OrganizationService {
 
     private final OrganizationRepository repository;
 
     public OrganizationResponse create(OrganizationRequest request) {
+        log.info("Creating new organization with code: {}", request.getCode());
 
         if (repository.existsByCode(request.getCode())) {
+            log.warn("Organization code {} already exists", request.getCode());
             throw new RuntimeException("Organization code already exists");
         }
 
@@ -36,6 +40,7 @@ public class OrganizationService {
     }
 
     public OrganizationResponse update(Long id, OrganizationRequest request) {
+        log.info("Updating organization with ID: {}", id);
 
         Organization org = repository.findById(id)
                         .orElseThrow(() -> new ResourceNotFoundException("Orgnization not found"));
@@ -51,6 +56,7 @@ public class OrganizationService {
     }
 
     public OrganizationResponse getById(Long id) {
+        log.info("Fetching organization with ID: {}", id);
         Organization org = repository.findById(id)
                         .orElseThrow(() -> new ResourceNotFoundException("Orgnization not found"));
 
@@ -59,6 +65,7 @@ public class OrganizationService {
     }
 
     public List<OrganizationResponse> getAll() {
+        log.info("Fetching all organizations");
         return repository.findAll()
                 .stream()
                 .map(this::mapToResponse)
@@ -66,6 +73,7 @@ public class OrganizationService {
     }
 
     public void delete(Long id) {
+        log.info("Deleting organization with ID: {}", id);
         repository.deleteById(id);
     }
 

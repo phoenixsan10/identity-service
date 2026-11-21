@@ -13,9 +13,11 @@ import com.phoenixsan.identity.identity_service.master.repository.DepartmentRepo
 import com.phoenixsan.identity.identity_service.master.repository.OrganizationRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class DepartmentService {
 
     private final DepartmentRepository departmentRepository;
@@ -23,12 +25,14 @@ public class DepartmentService {
 
     // ✅ CREATE
     public DepartmentResponse create(DepartmentRequest request) {
+        log.info("Creating new department with code: {} for organization: {}", request.getCode(), request.getOrganizationId());
 
         Organization org = organizationRepository.findById(request.getOrganizationId())
                .orElseThrow(() -> new ResourceNotFoundException("Orgnization not found"));
 
         if (departmentRepository.existsByCodeAndOrganizationId(
                 request.getCode(), request.getOrganizationId())) {
+            log.warn("Department code {} already exists for organization {}", request.getCode(), request.getOrganizationId());
             throw new RuntimeException("Department code already exists for this organization");
         }
 
@@ -44,6 +48,7 @@ public class DepartmentService {
 
     // ✅ UPDATE
     public DepartmentResponse update(Long id, DepartmentRequest request) {
+        log.info("Updating department with ID: {}", id);
 
         Department dept = departmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Department not found"));
@@ -61,6 +66,7 @@ public class DepartmentService {
 
     // ✅ GET BY ID
     public DepartmentResponse getById(Long id) {
+        log.info("Fetching department with ID: {}", id);
 
         Department dept = departmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Department not found"));
@@ -70,6 +76,7 @@ public class DepartmentService {
 
     // ✅ GET ALL
     public List<DepartmentResponse> getAll() {
+        log.info("Fetching all departments");
 
         return departmentRepository.findAll()
                 .stream()
@@ -79,8 +86,10 @@ public class DepartmentService {
 
     // ✅ DELETE
     public void delete(Long id) {
+        log.info("Deleting department with ID: {}", id);
 
         if (!departmentRepository.existsById(id)) {
+            log.warn("Department with ID: {} not found for deletion", id);
             throw new ResourceNotFoundException("Department not found");
         }
 
@@ -89,8 +98,10 @@ public class DepartmentService {
 
     // 🔥 GET BY ORGANIZATION ID
     public List<DepartmentResponse> getByOrganizationId(Long organizationId) {
+        log.info("Fetching departments for organization ID: {}", organizationId);
 
         if (!organizationRepository.existsById(organizationId)) {
+            log.warn("Organization with ID: {} not found", organizationId);
             throw new ResourceNotFoundException("Orgnization not found");
 
         }

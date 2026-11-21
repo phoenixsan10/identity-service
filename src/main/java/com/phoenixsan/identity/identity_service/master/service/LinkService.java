@@ -11,17 +11,21 @@ import com.phoenixsan.identity.identity_service.master.entity.Link;
 import com.phoenixsan.identity.identity_service.master.repository.LinkRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class LinkService {
 
     private final LinkRepository linkRepository;
 
     // ✅ CREATE
     public LinkResponse create(LinkRequest request) {
+        log.info("Creating new link with name: {}", request.getName());
 
         if (linkRepository.existsByName(request.getName())) {
+            log.warn("Link with name {} already exists", request.getName());
             throw new RuntimeException("Link already exists");
         }
 
@@ -36,6 +40,7 @@ public class LinkService {
 
     // ✅ UPDATE
     public LinkResponse update(Long id, LinkRequest request) {
+        log.info("Updating link with ID: {}", id);
 
         Link link = linkRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Link not found"));
@@ -50,6 +55,7 @@ public class LinkService {
 
     // ✅ GET BY ID
     public LinkResponse getById(Long id) {
+        log.info("Fetching link with ID: {}", id);
 
         Link link = linkRepository.findById(id)
                     .orElseThrow(() -> new ResourceNotFoundException("Link not found"));
@@ -60,6 +66,7 @@ public class LinkService {
 
     // ✅ GET ALL
     public List<LinkResponse> getAll() {
+        log.info("Fetching all links");
 
         return linkRepository.findAll()
                 .stream()
@@ -69,8 +76,10 @@ public class LinkService {
 
     // ✅ DELETE
     public void delete(Long id) {
+        log.info("Deleting link with ID: {}", id);
 
         if (!linkRepository.existsById(id)) {
+            log.warn("Link with ID: {} not found for deletion", id);
                 throw new ResourceNotFoundException("Orgnization not found");
 
         }
